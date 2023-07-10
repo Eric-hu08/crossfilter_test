@@ -8,7 +8,7 @@
 body {
   font-family: "Helvetica Neue";
   margin: 40px auto;
-  width: 960px;
+  width: 1960px;
   min-height: 2000px;
 }
 
@@ -158,39 +158,18 @@ aside {
 
 <h1>Crossfilter</h1>
 
-<h2>Fast Multidimensional Filtering for Coordinated Views</h2>
-
-<h3  style="color:red">Status</h3>
-
-<p style="color:red">
-Crossfilter is not under active development, maintenance or support by Square, its original author Mike Bostock, or the recent contributors (Jason Davies, Tom Carden). We still welcome genuine bug-fixes and PRs but consider the current API and feature-set (~1.3.12) essentially complete.
-
-A new <a href="https://github.com/crossfilter" title="Crossfilter on Github">Crossfilter Organization</a> has been created on Github and is home to an <a href="https://github.com/crossfilter/crossfilter">actively maintained fork of Crossfilter</a>. This version is already used by popular library <a href="https://dc-js.github.io/dc.js/">DC.js</a> and the contributors are working on improved APIs and performance improvements for current Javascript VMs. There are no plans to merge or publish new versions under the original Square repository or npm package.
-</p>
-
-
-<p><b>Crossfilter</b> is a <a href="https://github.com/square/crossfilter">JavaScript library</a> for exploring large multivariate datasets in the browser. Crossfilter supports extremely fast (&lt;30ms) interaction with coordinated views, even with datasets containing a million or more records; we built it to power analytics for <a href="https://squareup.com/register">Square Register</a>, allowing merchants to slice and dice their payment history fluidly.
-
-<p>Since most interactions only involve a single dimension, and then only small adjustments are made to the filter values, incremental filtering and reducing is significantly faster than starting from scratch. Crossfilter uses sorted indexes (and a few bit-twiddling hacks) to make this possible, dramatically increasing the perfor&shy;mance of live histograms and top-<i>K</i> lists. For more details on how Crossfilter works, see the <a href="https://github.com/square/crossfilter/wiki/API-Reference">API reference</a>.
-
-<h2>Example: Airline on-time performance</h2>
-
-<p>The coordinated visualizations below (built with <a href="http://mbostock.github.com/d3/">D3</a>) show nearly a quarter-million flights from early 2001: part of the <a href="http://stat-computing.org/dataexpo/2009/">ASA Data Expo</a> dataset. The dataset is 5.3MB, so it might take a few seconds to download. Click and drag on any chart to filter by the associated dimension. The table beneath shows the eighty most recent flights that match the current filters; these are the <i>details on demand</i>, anecdotal evidence you can use to weigh different hypotheses.
-
-<p>Some questions to consider: How does time-of-day correlate with <a href="javascript:filter([null, [100, 150], null, null])">arrival delay</a>? Are <a href="javascript:filter([null, null, [1700, 2000], null])">longer</a> or <a href="javascript:filter([null, null, [0, 300], null])">shorter</a> flights more likely to arrive early? What happened on <a href="javascript:filter([null, [80, 150], null, [new Date(2001, 0, 12), new Date(2001, 0, 13)]])">January 12</a>? How do flight patterns differ between <a href="javascript:filter([null, null, null, [new Date(2001, 0, 27), new Date(2001, 0, 29)]])">weekends</a> and <a href="javascript:filter([null, null, null, [new Date(2001, 0, 29), new Date(2001, 1, 3)]])">weekdays</a>, or <a href="javascript:filter([[4, 7], null, null, null])">mornings</a> and <a href="javascript:filter([[21, 24], null, null, null])">nights</a>? <a href="https://github.com/square/crossfilter/tree/gh-pages">Fork this example</a> and try your own data!
-
 <div id="charts">
   <div id="hour-chart" class="chart">
-    <div class="title">Time of Day</div>
+    <div class="title">NumMentions</div>
   </div>
   <div id="delay-chart" class="chart">
-    <div class="title">Arrival Delay (min.)</div>
+    <div class="title">EventOffSet</div>
   </div>
   <div id="distance-chart" class="chart">
-    <div class="title">Distance (mi.)</div>
+    <div class="title">Country1</div>
   </div>
   <div id="date-chart" class="chart">
-    <div class="title">Date</div>
+    <div class="title">Articles</div>
   </div>
 </div>
 
@@ -211,13 +190,14 @@ A new <a href="https://github.com/crossfilter" title="Crossfilter on Github">Cro
 
 <a href="https://github.com/square/crossfilter"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"></a>
 
-<script src="crossfilter.v1.min.js"></script>
+<script src="crossfilter.min.js"></script>
 <script src="d3.v3.min.js"></script>
+<!-- <script src="https://d3js.org/d3.v4.min.js"></script> -->
 <script>
 
 // (It's CSV, but GitHub Pages only gzip's JSON at the moment.)
-d3.csv("flights-3m.json", function(error, flights) {
-
+// d3.csv("flights-3m.json", function(error, flights) {
+  d3.csv("20230515_20230530_core.csv", function(error, flights) {
   // Various formatters.
   var formatNumber = d3.format(",d"),
       formatChange = d3.format("+,d"),
@@ -231,54 +211,117 @@ d3.csv("flights-3m.json", function(error, flights) {
   // A little coercion, since the CSV is untyped.
   flights.forEach(function(d, i) {
     d.index = i;
-    d.date = parseDate(d.date);
+
+    // d.date = parseDate(d.date);
     d.delay = +d.delay;
     d.distance = +d.distance;
+
+    
+
+
   });
 
   // Create the crossfilter for the relevant dimensions and groups.
   var flight = crossfilter(flights),
       all = flight.groupAll(),
-      date = flight.dimension(function(d) { return d.date; }),
-      dates = date.group(d3.time.day),
-      hour = flight.dimension(function(d) { return d.date.getHours() + d.date.getMinutes() / 60; }),
-      hours = hour.group(Math.floor),
-      delay = flight.dimension(function(d) { return Math.max(-60, Math.min(149, d.delay)); }),
-      delays = delay.group(function(d) { return Math.floor(d / 10) * 10; }),
-      distance = flight.dimension(function(d) { return Math.min(1999, d.distance); }),
-      distances = distance.group(function(d) { return Math.floor(d / 50) * 50; });
+      // date = flight.dimension(function(d) { return d.date; }),
+      // dates = date.group(d3.time.day),
+      // hour = flight.dimension(function(d) { return d.date.getHours() + d.date.getMinutes() / 60; }),
+      // hours = hour.group(Math.floor),
+      // delay = flight.dimension(function(d) { return Math.max(-60, Math.min(149, d.delay)); }),
+      // delays = delay.group(function(d) { return Math.floor(d / 10) * 10; }),
+      // distance = flight.dimension(function(d) { return Math.min(1999, d.distance); }),
+      // distances = distance.group(function(d) { return Math.floor(d / 50) * 50; });
+
+      numMention = flight.dimension(function(d){
+        // console.log('d',typeof parseInt(d.NumMentions))
+        return parseInt(d.NumMentions)})
+      article=flight.dimension(function(d){return parseInt(d.Articles)})
+      articles=article.group()
+      // window.numM=numMention;
+      NumMentions=numMention.group()
+      // console.log("NumMentions",numMention.top(Infinity))
+      
+      EventOffSet=flight.dimension(function(d){
+        // console.log('d type ',typeof d3.format(".2f")(parseFloat(d.EventOffSet))) //不知为何还是String类型
+        // return d3.format(".2f")(parseFloat(d.EventOffSet))
+        return d.EventOffSet
+      
+      })
+      EventOffSets=EventOffSet.group(function(x){
+        return d3.format(".2f")(x);
+      })
+      
+      console.log('offsets',EventOffSet.top(Infinity))
+
+      Country1=flight.dimension(function(d){return d.Country1})
+      
+      Country1_array=Country1.top(Infinity)
+      Country1s=Country1.group()
+
+      console.log('coutry1', Country1s.all())
+
+      var country_list=[]
+      var country_map=new Map();
+      var index_list=[]
+      // console.log('countrytest',Country1_array[2].Country1)
+      var j=0
+      for(var i=0;i<Country1_array.length;i++){
+        // console.log('country iter',i,Country1_array[i].Country1)
+        if(!country_map.has(Country1_array[i].Country1)){
+          country_list.push(Country1_array[i].Country1)
+          index_list.push(j)
+          j++;
+          country_map.set(Country1_array[i].Country1,1)
+        }
+        
+      }
+      console.log('country index list',country_list)
+
+      var textrule=d3.scale.ordinal()
+        .domain(['a','b','c','d'])
+        .range([0,1,2,3])
+      
+      console.log('testrule test',textrule('b'),textrule('c'),textrule('d'),index_list)
 
   var charts = [
 
     barChart()
-        .dimension(hour)
-        .group(hours)
+        .dimension(numMention)
+        .group(NumMentions)
       .x(d3.scale.linear()
-        .domain([0, 24])
-        .rangeRound([0, 10 * 24])),
+        .domain([0, 220])
+        .rangeRound([0, 240])),//横轴的长度
 
     barChart()
-        .dimension(delay)
-        .group(delays)
+        .dimension(EventOffSet)
+        .group(EventOffSets)
       .x(d3.scale.linear()
-        .domain([-60, 150])
-        .rangeRound([0, 10 * 21])),
+        .domain([0, 2])
+        .rangeRound([0, 210])),
 
     barChart()
-        .dimension(distance)
-        .group(distances)
-      .x(d3.scale.linear()
-        .domain([0, 2000])
-        .rangeRound([0, 10 * 40])),
+        .dimension(Country1)
+        .group(Country1s)
+      .x(d3.scale.ordinal()
+        .domain(country_list)
+        .rangeBands([0,400],0.1)),
+        // .rangeRound([0, 10 * 40])),
 
-    barChart()
-        .dimension(date)
-        .group(dates)
-        .round(d3.time.day.round)
-      .x(d3.time.scale()
-        .domain([new Date(2001, 0, 1), new Date(2001, 3, 1)])
-        .rangeRound([0, 10 * 90]))
-        .filter([new Date(2001, 1, 1), new Date(2001, 2, 1)])
+        barChart()
+        .dimension(article)
+        .group(articles)
+      .x(d3.scale.linear()
+        .domain([0, 370])
+        .rangeRound([0, 200])),
+    // barChart()
+    //     .dimension(date)
+    //     .group(dates)
+    //     .round(d3.time.day.round)
+    //   .x(d3.time.scale()
+    //     .domain([new Date(2001, 0, 1), new Date(2001, 3, 1)])
+    //     .rangeRound([0, 10 * 90]))
+    //     .filter([new Date(2001, 1, 1), new Date(2001, 2, 1)])
 
   ];
 
@@ -287,11 +330,12 @@ d3.csv("flights-3m.json", function(error, flights) {
   // We also listen to the chart's brush events to update the display.
   var chart = d3.selectAll(".chart")
       .data(charts)
-      .each(function(chart) { chart.on("brush", renderAll).on("brushend", renderAll); });
+      .each(function(chart) { chart.on("brush", renderAll).on("brushend", renderAll); }); //监听刷选事件
 
   // Render the initial lists.
   var list = d3.selectAll(".list")
       .data([flightList]);
+      // .data([flightList);
 
   // Render the total.
   d3.selectAll("#total")
@@ -308,7 +352,7 @@ d3.csv("flights-3m.json", function(error, flights) {
   function renderAll() {
     chart.each(render);
     list.each(render);
-    d3.select("#active").text(formatNumber(all.value()));
+    d3.select("#active").text(formatNumber(all.value())); //侧边栏动态数据
   }
 
   // Like d3.time.format, but faster.
@@ -320,7 +364,7 @@ d3.csv("flights-3m.json", function(error, flights) {
         d.substring(6, 8));
   }
 
-  window.filter = function(filters) {
+  window.filter = function(filters) {  //定义全局方法
     filters.forEach(function(d, i) { charts[i].filter(d); });
     renderAll();
   };
@@ -331,46 +375,61 @@ d3.csv("flights-3m.json", function(error, flights) {
   };
 
   function flightList(div) {
-    var flightsByDate = nestByDate.entries(date.top(40));
-
+    // d3.select(this).selectAll(".date").remove()s
+    // console.log('listfunc')
+    // console.log('brush',brush.extent)
+    // var flightsByDate = nestByDate.entries(date.top(40)); //list只显示40行
+    var flightsByDate = numMention.top(40); //list只显示40行
+    // var flightsByDate = window.numM.top(40); //list只显示40行
+    // var flightsByDate = window.numM.top(Infinity); //list只显示40行
+    
+    // console.log('listdata',flightsByDate)
     div.each(function() {
-      var date = d3.select(this).selectAll(".date")
-          .data(flightsByDate, function(d) { return d.key; });
+      var date = d3.select(this).selectAll(".flight")
+          .data(flightsByDate);
+      // console.log('datedata',date)
+      // date.enter().append("div")
+      //     .attr("class", "date")
+      // //   .append("div")
+      // //     .attr("class", "day")
+      // //     .text(function(d) { return (d.values[0].date); });
 
-      date.enter().append("div")
-          .attr("class", "date")
-        .append("div")
-          .attr("class", "day")
-          .text(function(d) { return formatDate(d.values[0].date); });
+      // date.exit().remove();
 
-      date.exit().remove();
-
-      var flight = date.order().selectAll(".flight")
-          .data(function(d) { return d.values; }, function(d) { return d.index; });
-
-      var flightEnter = flight.enter().append("div")
+      // console.log('test1')
+      // var flight= flightsByDate
+      // var flight = date.order().selectAll(".flight")
+      //     .data(flightsByDate);
+      // console.log('flightdata',flight)
+      var flight=date
+      var flightEnter = flight.enter().append("div") //数据表中每一行是一个div
           .attr("class", "flight");
-
-      flightEnter.append("div")
+          // console.log('test1')
+          // console.log('flightenter',flightEnter)
+      flightEnter.append("div") // 一行中每一列都是一个小div
           .attr("class", "time")
-          .text(function(d) { return formatTime(d.date); });
-
+          .text(function(d) { 
+            // console.log('d',d)
+            return (d.GlobalEventID); });
+            
       flightEnter.append("div")
           .attr("class", "origin")
-          .text(function(d) { return d.origin; });
+          .text(function(d) { 
+            // console.log('d',d)
+            return d.NumMentions; });
 
       flightEnter.append("div")
           .attr("class", "destination")
-          .text(function(d) { return d.destination; });
+          .text(function(d) { return d.EventOffSet; });
 
       flightEnter.append("div")
           .attr("class", "distance")
-          .text(function(d) { return formatNumber(d.distance) + " mi."; });
+          .text(function(d) { return (d.Country1) ; });
 
       flightEnter.append("div")
           .attr("class", "delay")
-          .classed("early", function(d) { return d.delay < 0; })
-          .text(function(d) { return formatChange(d.delay) + " min."; });
+          // .classed("early", function(d) { return d.delay < 0; })
+          .text(function(d) { return (d.Country2) ; });
 
       flight.exit().remove();
 
@@ -386,6 +445,7 @@ d3.csv("flights-3m.json", function(error, flights) {
         y = d3.scale.linear().range([100, 0]),
         id = barChart.id++,
         axis = d3.svg.axis().orient("bottom"),
+        axisy= d3.svg.axis().scale(y).orient("left"),
         brush = d3.svg.brush(),
         brushDirty,
         dimension,
@@ -393,8 +453,12 @@ d3.csv("flights-3m.json", function(error, flights) {
         round;
 
     function chart(div) {
-      var width = x.range()[1],
+      var width = x.range()[x.range().length-1],
           height = y.range()[0];
+      
+      console.log('width range ',width)
+      console.log('type width',typeof width)
+
 
       y.domain([0, group.top(1)[0].value]);
 
@@ -429,14 +493,21 @@ d3.csv("flights-3m.json", function(error, flights) {
               .datum(group.all());
 
           g.selectAll(".foreground.bar")
-              .attr("clip-path", "url(#clip-" + id + ")");
+              .attr("clip-path", "url(#clip-" + id + ")"); //该元素调用了clippath
 
           g.append("g")
               .attr("class", "axis")
               .attr("transform", "translate(0," + height + ")")
-              .call(axis);
-
+              .call(axis)
+              .selectAll(".tick")
+              .style("font-size","1px")
+              // g.append("g")
+              // .attr("class", "axis")
+              // .attr("transform", "translate(30," + 0 + ")")
+              // .call(axisy);
           // Initialize the brush component with pretty resize handles.
+      
+
           var gBrush = g.append("g").attr("class", "brush").call(brush);
           gBrush.selectAll("rect").attr("height", height);
           gBrush.selectAll(".resize").append("path").attr("d", resizePath);
@@ -469,7 +540,7 @@ d3.csv("flights-3m.json", function(error, flights) {
             d;
         while (++i < n) {
           d = groups[i];
-          path.push("M", x(d.key), ",", height, "V", y(d.value), "h9V", height);
+          path.push("M", x(d.key), ",", height, "V", y(d.value), "h0.5V", height);
         }
         return path.join("");
       }
@@ -495,9 +566,11 @@ d3.csv("flights-3m.json", function(error, flights) {
       div.select(".title a").style("display", null);
     });
 
-    brush.on("brush.chart", function() {
+    brush.on("brush.chart", function() {  //开始刷选
+      console.log('brush begin!!!!!')
       var g = d3.select(this.parentNode),
           extent = brush.extent();
+      // console.log('extent',extent) //刷选的左右x坐标
       if (round) g.select(".brush")
           .call(brush.extent(extent = extent.map(round)))
         .selectAll(".resize")
@@ -505,15 +578,20 @@ d3.csv("flights-3m.json", function(error, flights) {
       g.select("#clip-" + id + " rect")
           .attr("x", x(extent[0]))
           .attr("width", x(extent[1]) - x(extent[0]));
-      dimension.filterRange(extent);
+      dimension.filterRange(extent); //筛选所刷选的范围
+      // window.numM.filterRange(extent)
+      console.log('dimension filter ',dimension.currentFilter())
+      console.log('dimension',dimension.top(4))
     });
 
-    brush.on("brushend.chart", function() {
+    brush.on("brushend.chart", function() {  //刷选结束
+      console.log('brush end!!!')
       if (brush.empty()) {
         var div = d3.select(this.parentNode.parentNode.parentNode);
         div.select(".title a").style("display", "none");
         div.select("#clip-" + id + " rect").attr("x", null).attr("width", "100%");
         dimension.filterAll();
+        // window.numM.filterAll();
       }
     });
 
